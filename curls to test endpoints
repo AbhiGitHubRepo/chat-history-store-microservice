@@ -1,0 +1,65 @@
+# CURL COMMANDS TO TEST ENDPOINTS
+# --------------------------------
+
+# Health Check
+curl -s -H "X-API-Key: dev-key-123" http://localhost:4001/health
+# Response: {"status":"ok"}
+
+# Prisma Migration (run before testing)
+docker compose run --rm app npx prisma db push
+
+# SESSION ENDPOINTS
+# -----------------
+
+# Start a session
+curl -s -H "X-API-Key: dev-key-123" -H "Content-Type: application/json" \
+  -d '{"userId":"u2","title":"Second Chat"}' \
+  http://localhost:4001/sessions
+# Response: {"id":"cmg2zppr80001ob01mnkwifnq"}
+
+# List sessions (pagination)
+curl -s -H "X-API-Key: dev-key-123" "http://localhost:4001/sessions?userId=u1&page=1&pageSize=10"
+# Response: {"items":[{"id":"cmg2zppr80001ob01mnkwifnq","title":"First Chat","favorite":false,"createdAt":"2025-09-28T00:57:26.166Z"}],"total":1}
+
+# Rename session
+curl -s -X PATCH -H "X-API-Key: dev-key-123" -H "Content-Type: application/json" \
+  -d '{"title":"Renamed"}' \
+  "http://localhost:4001/sessions/cmg2zppr80001ob01mnkwifnq/rename?userId=u1"
+# Response: (no response)
+
+# Verify rename
+curl -s -H "X-API-Key: dev-key-123" "http://localhost:4001/sessions?userId=u1&page=1&pageSize=10"
+# Response: {"items":[{"id":"cmg2zppr80001ob01mnkwifnq","title":"Renamed","favorite":false,"createdAt":"2025-09-28T00:57:26.166Z"}],"total":1}
+
+# Toggle favorite
+curl -s -X PATCH -H "X-API-Key: dev-key-123" -H "Content-Type: application/json" \
+  -d '{"favorite":true}' \
+  "http://localhost:4001/sessions/cmg2zppr80001ob01mnkwifnq/favorite?userId=u1"
+# Verify favorite
+curl -s -H "X-API-Key: dev-key-123" "http://localhost:4001/sessions?userId=u1&page=1&pageSize=10"
+# Response: {"items":[{"id":"cmg2zppr80001ob01mnkwifnq","title":"Renamed","favorite":true,"createdAt":"2025-09-28T00:57:26.166Z"}],"total":1}
+
+# Delete session (soft)
+curl -s -X DELETE -H "X-API-Key: dev-key-123" \
+  "http://localhost:4001/sessions/cmg30340t0002ob01v0uhl5ek?userId=u2"
+# Verify deletion
+curl -s -H "X-API-Key: dev-key-123" "http://localhost:4001/sessions?userId=u2&page=1&pageSize=10"
+# Response: {"items":[],"total":0}
+
+# MESSAGE ENDPOINTS
+# -----------------
+
+# Add message
+curl -s -H "X-API-Key: dev-key-123" -H "Content-Type: application/json" \
+  -d '{"sessionId":"cmg2zppr80001ob01mnkwifnq","role":"user","content":"Hello"}' \
+  http://localhost:4001/messages
+# Response: {"id":"cmg31zft50004ob01vad6afj4"}
+
+# List messages (pagination)
+curl -s -H "X-API-Key: dev-key-123" \
+  "http://localhost:4001/messages?sessionId=cmg2zppr80001ob01mnkwifnq&page=1&pageSize=50"
+# Response: {"items":[{"id":"cmg31zft50004ob01vad6afj4","role":"user","content":"Hello","createdAt":"2025-09-28T02:00:59.063Z"}, {"id":"cmg322zmk0006ob01uxiycjg8","role":"user","content":"are you there","createdAt":"2025-09-28T02:03:44.732Z"}],"total":2}
+
+# Delete message (soft)
+curl -s -X DELETE -H "X-API-Key: dev-key-123" \
+  http://localhost:4001/messages/MESSAGE_ID
